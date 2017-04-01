@@ -23,7 +23,7 @@ def render_elm(request, html_template, html_context, elm_template, elm_context):
     elm_with_context_file.write(rendered_elm)
 
   # Call elm-make on the rendered file
-  return_code = subprocess.call("elm-make " + elm_filename + " --output " + js_filename, shell=True) 
+  return_code = subprocess.call("elm-make " + elm_filename + " --output " + js_filename, shell=True)
 
   # Exit if failed to build
   if return_code != 0:
@@ -41,7 +41,7 @@ def render_elm(request, html_template, html_context, elm_template, elm_context):
   html_context['elm_js'] = compiled_javascript
 
   return render(request, html_template, html_context)
-  
+
 
 # Create your views here.
 class HomeView(View):
@@ -54,5 +54,5 @@ class HomeView(View):
       #'elm_flags': elm_flags,
       'static_file': 'js/home.js'
     }
-    #return render(request, 'elm.html', context)
-    return render_elm(request, 'elm.html', context, 'home.elm', elm_flags)
+    return render(request, 'elm.html', context)
+    #return render_elm(request, 'elm.html', context, 'home.elm', elm_flags)
