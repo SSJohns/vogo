@@ -1,8 +1,7 @@
 from django.contrib import admin
 
 # Register your models here.
-from .models import AbstractQuestion, AbstractResponse, BoolQuestion, BoolResponse, MCQuestion, MCOption, MCResponse
-
+from .models import BoolQuestion, BoolResponse, MCQuestion, MCOption, MCResponse
 
 admin.site.register(BoolQuestion)
 admin.site.register(MCQuestion)
