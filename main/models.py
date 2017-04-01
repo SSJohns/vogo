@@ -16,6 +16,9 @@ class Question(models.Model):
     lon = models.DecimalField(max_digits=9, decimal_places=6)
     radius = models.DecimalField(max_digits=50, decimal_places=5, default="")
 
+    def __str__(self):
+        return self.title
+
 class Response(models.Model):
     id = models.CharField(primary_key=True, default=generateUUID, editable=False, max_length=40)
     question_id = models.ForeignKey(Question, on_delete=models.CASCADE)
