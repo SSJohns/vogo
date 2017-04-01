@@ -26,4 +26,4 @@ class Response(models.Model):
     ip_addr = models.GenericIPAddressField()
 
 class MCQuestion(Question):
-    propmt = models.TextField(max_length=500)
+    pass
