@@ -23,7 +23,8 @@ def render_elm(request, html_template, html_context, elm_template, elm_context):
     elm_with_context_file.write(rendered_elm)
 
   # Call elm-make on the rendered file
-  return_code = subprocess.call("elm-make " + elm_filename + " --output " + js_filename, shell=True)
+  # TODO: Only debug is settings.debug
+  return_code = subprocess.call("elm-make " + elm_filename + " --debug --output " + js_filename, shell=True)
 
   # Exit if failed to build
   if return_code != 0:

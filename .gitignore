@@ -4,3 +4,4 @@
 static/
 elm-stuff/
 *.pyc
+elm-build/
