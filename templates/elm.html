@@ -31,6 +31,9 @@
     <script>
       var node = document.getElementById('my-app');
       var app = Elm.TestModule.embed(node);
+      $(document).ready(function(){
+        $('.modal').modal();
+      });
     </script>
   </body>
 </html>

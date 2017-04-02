@@ -192,9 +192,23 @@ icon name =
 
 createButton : Html Msg
 createButton =
-  div [ class "fixed-action-btn" ]
-    [ button [ class "btn-floating btn-large waves-effect waves-light cyan lighten-3" ]
-      [ icon "add"
+  div [] 
+    [ div [ class "fixed-action-btn" ]
+      [ a [ href "#modal1", class "modal-trigger btn-floating btn-large waves-effect waves-light cyan lighten-3"]
+        [ icon "add" ]
+        ]
+    , div [ id "modal1", class "modal modal-fixed-footer" ]
+      [ div [ class "modal-content" ]
+        [ div [ class "row" ]
+          [ div [class "input-field col s6" ]
+            [ input [ id "firstname", type_ "text", attribute "data-length" "25" ] []
+            , label [for "firstname"] [ text "Input!" ]
+            ]
+          ]
+        ]
+      , div [ class "modal-footer" ] 
+        [ h3 [] [ text "Test!!" ] 
+        ]
       ]
     ]
 
