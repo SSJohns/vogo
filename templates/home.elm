@@ -183,7 +183,7 @@ card question =
           , downvoteButton question
           ]
         ]
-      ]     
+      ]
     ]
 
 icon : String -> Html Msg
@@ -210,11 +210,13 @@ navbar =
 
 questions : List Question
 questions =
-  [ Voting <| VotingQuestion "Title of Q" "lorem ipsum dolor sit amet" 0 "1" Neutral
-  , MC <| mc_question
-  , Voting <| VotingQuestion "Title of Q" "lorem ipsum dolor sit amet" 0 "2" Neutral
-  , MC <| mc_question
-  , Voting <| VotingQuestion "Title of Q" "lorem ipsum dolor sit amet" 0 "3" Neutral
+  [
+  {% for question in voting_questions %}
+    Voting <| VotingQuestion "{{ question.title }}" "{{ question.prompt }}" {{ question.score }} "{{ question.id }}" Neutral
+    {% if not forloop.last	%}
+    ,
+    {% endif %}
+  {% endfor %}
   ]
 
 mcOption : MultipleChoiceOption -> Html Msg

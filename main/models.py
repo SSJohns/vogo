@@ -15,6 +15,7 @@ class AbstractQuestion(models.Model):
     lat = models.DecimalField(max_digits=9, decimal_places=6)
     lon = models.DecimalField(max_digits=9, decimal_places=6)
     radius = models.DecimalField(max_digits=50, decimal_places=5, default="")
+    score = models.IntegerField(default=0)
 
     def __str__(self):
         return self.title
