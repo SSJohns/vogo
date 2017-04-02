@@ -14,8 +14,7 @@ class AbstractQuestion(models.Model):
     expiration = models.DateTimeField('expires')
     lat = models.DecimalField(max_digits=9, decimal_places=6)
     lon = models.DecimalField(max_digits=9, decimal_places=6)
-    radius = models.DecimalField(max_digits=50, decimal_places=5, default="")
-    score = models.IntegerField(default=0)
+    radius = models.DecimalField(max_digits=50, decimal_places=5, default=0)
 
     def __str__(self):
         return self.title
@@ -25,13 +24,15 @@ class AbstractQuestion(models.Model):
 
 class AbstractResponse(models.Model):
     id = models.CharField(primary_key=True, default=generateUUID, editable=False, max_length=40)
-    ip_addr = models.GenericIPAddressField()
+    session_key_of_creator = models.CharField(max_length=255)
 
     class Meta:
         abstract = True
 
 class BoolQuestion(AbstractQuestion):
-    pass
+  @property
+  def responses(self):
+    return BoolResponse.objects.filter(question_id=self)
 
 class BoolResponse(AbstractResponse):
     vote_resp = models.BooleanField(default=False)

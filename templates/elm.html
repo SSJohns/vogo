@@ -26,13 +26,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.1/jquery.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.1/js/materialize.min.js"></script>
     <script>
+      function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          var cookies = document.cookie.split(';');
+          for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+      var csrftoken = getCookie('csrftoken');
+      function csrfSafeMethod(method) {
+        // these HTTP methods do not require CSRF protection
+        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+      }
+      (function() {
+        var send = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.send = function(data) {
+          this.setRequestHeader('X-CSRFToken', csrftoken);
+          return send.apply(this, arguments);
+        };
+      }());
+    </script>
+    <script>
       {{ elm_js | safe }}
     </script>
     <script>
       var node = document.getElementById('my-app');
       var app = Elm.TestModule.embed(node);
       $(document).ready(function(){
-        $('.modal').modal();
+        setTimeout(function() {
+          $('.modal').modal();
+        }, 2000);
       });
     </script>
   </body>

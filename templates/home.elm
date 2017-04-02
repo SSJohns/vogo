@@ -1,14 +1,17 @@
 module TestModule exposing (..)
 
+import Geolocation exposing (Location)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
+import Task
 import Json.Decode as Decode
+import Json.Encode as Encode
 
 main =
   Html.program
-    { init = init ! []
+    { init = (init, Task.attempt Update Geolocation.now)
     , view = view
     , update = update
     , subscriptions = subscriptions
@@ -20,6 +23,7 @@ type alias Model =
   { score : Int
   , name : String
   , questions : List Question
+  , userLocation : Result Geolocation.Error (Maybe Location)
   }
 
 type Question
@@ -32,6 +36,8 @@ type alias VotingQuestion =
   , score : Int
   , uuid : String
   , userStatus : Status
+  , location : SimpleLocation
+  , radius : Float
   }
 
 type alias MultipleChoiceQuestion =
@@ -39,6 +45,8 @@ type alias MultipleChoiceQuestion =
   , title : String
   , prompt : String
   , answers : List MultipleChoiceOption
+  , location : SimpleLocation
+  , radius : Float
   }
 
 type alias MultipleChoiceOption =
@@ -46,10 +54,6 @@ type alias MultipleChoiceOption =
   , uuid : String
   , selected : Bool
   }
-
-mc_question : MultipleChoiceQuestion
-mc_question =
-  MultipleChoiceQuestion "0xyz" "What dinner?" "What want." options
 
 options : List MultipleChoiceOption
 options =
@@ -66,14 +70,15 @@ type Status
 
 init : Model
 init =
-  Model {{ score }} "{{ name }}" questions
+  Model 0 "" questions (Ok Nothing)
 
 -- UPDATE
 
 type Msg
-  = Noop
-  | Upvote VotingQuestion
+  = Upvote VotingQuestion
   | Downvote VotingQuestion
+  | Update (Result Geolocation.Error Location)
+  | ReceiveResponse (Result Http.Error String)
 
 increaseScore : VotingQuestion -> VotingQuestion
 increaseScore question =
@@ -101,6 +106,54 @@ undoExistingVote question =
     Neutral ->
       question
 
+type alias SimpleLocation =
+  { lat : Float
+  , lon : Float
+  }
+
+distanceBetween : SimpleLocation -> SimpleLocation -> Float
+distanceBetween start end =
+  let
+    dlat = end.lat - start.lat
+    dlng = end.lon - start.lon
+  in
+    ( sqrt ((dlat * dlat) + (dlng * dlng)) ) * 111319.5
+
+getQuestionLoc : Question -> SimpleLocation
+getQuestionLoc question = 
+  case question of
+    Voting q ->
+      q.location
+    MC q ->
+      q.location
+
+getQuestionRadius : Question -> Float
+getQuestionRadius question = 
+  case question of
+    Voting q ->
+      q.radius
+    MC q ->
+      q.radius
+
+filterByRadius : (Result Geolocation.Error (Maybe Location)) -> Question -> Bool
+filterByRadius userLocation question =
+  case userLocation of
+    Ok (Just location) ->
+      (distanceBetween { lat=location.latitude, lon=location.longitude } (getQuestionLoc question)) < (getQuestionRadius question)
+
+    _ ->
+      False
+
+compareDistancesTo : (Result Geolocation.Error (Maybe Location)) -> Question -> Question -> Basics.Order
+compareDistancesTo userLocation a b =
+  case userLocation of
+    Ok (Just location) ->
+      let
+        distanceFromStart = distanceBetween { lat=location.latitude, lon=location.longitude }
+      in
+        compare (distanceFromStart <| getQuestionLoc a) (distanceFromStart <| getQuestionLoc b)
+    _ ->
+      EQ
 
 updateQuestion : Status -> VotingQuestion -> VotingQuestion
 updateQuestion newStatus question =
@@ -137,16 +190,29 @@ updateQuestions questions id newStatus =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    Noop ->
-      model ! []
-
     Upvote question ->
       { model | questions = (updateQuestions model.questions question.uuid Upvoted) }
-        ! []
+        ! [makeRequest <| upvoteRequest question]
 
     Downvote question ->
       { model | questions = (updateQuestions model.questions question.uuid) Downvoted}
-        ! []
+        ! [makeRequest <| downvoteRequest question]
+
+    Update result ->
+      { model | userLocation = Result.map Just result } ! []
+
+    ReceiveResponse _ ->
+      model ! []
+    {--
+    ReceiveResponse (Ok response) ->
+      model ! []
+
+    ReceiveResponse (Err err) ->
+      model
+        |> setResult (toString err)
+        |> markResultAsError
+        |> endLoading
+    --}
 
 -- VIEW
 
@@ -226,18 +292,18 @@ questions : List Question
 questions =
   [
   {% for question in voting_questions %}
-    Voting <| VotingQuestion "{{ question.title }}" "{{ question.prompt }}" {{ question.score }} "{{ question.id }}" Neutral,
+    Voting <| VotingQuestion "{{ question.title }}" "{{ question.prompt }}" {{ question.score }} "{{ question.id }}" {{ question.user_vote }} (SimpleLocation {{ question.lat }} {{ question.lon }}) {{ question.radius }},
   {% endfor %}
   {% for question in mc_questions %}
     MC <| MultipleChoiceQuestion "{{ question.id }}" "{{ question.title }}" "{{ question.prompt }}" 
       [
       {% for option in question.possibleAnswers %}
-        MultipleChoiceOption "{{ option.option }}" "{{ option.id }}" False
+        MultipleChoiceOption "{{ option.option | safe }}" "{{ option.id }}" False
         {% if not forloop.last %}
         ,
         {% endif %}
       {% endfor %}
-      ]
+      ] (SimpleLocation {{ question.lat }} {{ question.lon }}) {{ question.radius }}
     {% if not forloop.last %}
     ,
     {% endif %}
@@ -278,18 +344,40 @@ view model =
   div [ class "cyan lighten-5" ]
     [ navbar
     , createButton
-    , div [] (List.map questionView model.questions)
-    {--
-    , mcQuestion mc_question
-    , h2 [] [text <| toString model.score]
-    , h2 [] [text model.name]
-    , h2 [] [text "YAY!"]
-    , div [] (List.map card model.questions)
-    --}
+    , div []
+      ( model.questions
+        |> List.filter (filterByRadius model.userLocation)
+        |> List.sortWith (compareDistancesTo model.userLocation)
+        |> List.map questionView
+      )
     ]
 
 -- SUBSCRIPTIONS
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  Sub.none
+  Geolocation.changes (Update << Ok)
+
+-- Effects
+
+upvoteRequest : VotingQuestion -> Http.Body
+upvoteRequest question =
+  Http.jsonBody <| Encode.object 
+    [ ("question_id", Encode.string question.uuid)
+    , ("should_upvote", Encode.bool True)
+    ]
+
+downvoteRequest : VotingQuestion -> Http.Body
+downvoteRequest question =
+  Http.jsonBody <| Encode.object 
+    [ ("question_id", Encode.string question.uuid)
+    , ("should_upvote", Encode.bool False)
+    ]
+
+makeRequest : Http.Body -> Cmd Msg
+makeRequest json =
+  Http.send ReceiveResponse (Http.post "" json decoder)
+
+decoder : Decode.Decoder String
+decoder =
+  Decode.at ["message"] Decode.string
