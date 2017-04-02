@@ -11,7 +11,6 @@ class AbstractQuestion(models.Model):
     id = models.CharField(primary_key=True, default=generateUUID, editable=False, max_length=40)
     title = models.CharField(max_length=20)
     prompt = models.TextField(max_length=500, null=True)
-    expiration = models.DateTimeField('expires')
     lat = models.DecimalField(max_digits=9, decimal_places=6)
     lon = models.DecimalField(max_digits=9, decimal_places=6)
     radius = models.DecimalField(max_digits=50, decimal_places=5, default=0)

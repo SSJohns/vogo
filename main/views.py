@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.template import loader
 from django.views.generic import View
 from django.http import HttpResponse, JsonResponse
@@ -19,12 +19,12 @@ def render_elm(request, html_template, html_context, elm_template, elm_context):
   if not request.session.session_key:
     request.session.save()
   session_key = request.session.session_key
+
   js_filename = 'elm-build/temp' + str(session_key) + '.js'
   elm_filename = 'elm-build/temp' + str(session_key) + '.elm'
 
   # Render the elm
   rendered_elm = loader.render_to_string(elm_template, elm_context, request)
-  print(rendered_elm)
 
   # Output the rendered elm to a temporary file
   with open(elm_filename, 'w+') as elm_with_context_file:
@@ -127,3 +127,16 @@ class HomeView(View):
       'static_file': 'js/home.js'
     }
     return render_elm(request, 'elm.html', context, 'home.elm', elm_flags)
+
+class CreateView(View):
+  def post(self, request):
+    print(request.POST)
+    question = BoolQuestion.objects.create(
+      title = request.POST["title"],
+      prompt = request.POST["prompt"],
+      radius = 16094, # 10 miles
+      lat = float(request.POST["lat"]),
+      lon = float(request.POST["lon"]),
+    )
+    question.save()
+    return redirect('/')

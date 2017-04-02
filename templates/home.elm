@@ -20,10 +20,10 @@ main =
 -- MODEL
 
 type alias Model =
-  { score : Int
-  , name : String
-  , questions : List Question
+  { questions : List Question
   , userLocation : Result Geolocation.Error (Maybe Location)
+  , title : String
+  , prompt : String
   }
 
 type Question
@@ -70,7 +70,7 @@ type Status
 
 init : Model
 init =
-  Model 0 "" questions (Ok Nothing)
+  Model questions (Ok Nothing) "" ""
 
 -- UPDATE
 
@@ -79,6 +79,8 @@ type Msg
   | Downvote VotingQuestion
   | Update (Result Geolocation.Error Location)
   | ReceiveResponse (Result Http.Error String)
+  | PromptUpdated String
+  | TitleUpdated String
 
 increaseScore : VotingQuestion -> VotingQuestion
 increaseScore question =
@@ -135,6 +137,15 @@ getQuestionRadius question =
     MC q ->
       q.radius
 
+getUserLocation : Model -> SimpleLocation
+getUserLocation model =
+  case model.userLocation of
+    Ok (Just location) ->
+      SimpleLocation location.latitude location.longitude
+
+    _ ->
+      SimpleLocation 0 0
+
 filterByRadius : (Result Geolocation.Error (Maybe Location)) -> Question -> Bool
 filterByRadius userLocation question =
   case userLocation of
@@ -190,6 +201,12 @@ updateQuestions questions id newStatus =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
+    TitleUpdated newTitle ->
+      { model | title = newTitle } ! []
+
+    PromptUpdated newPrompt ->
+      { model | prompt = newPrompt } ! []
+
     Upvote question ->
       { model | questions = (updateQuestions model.questions question.uuid Upvoted) }
         ! [makeRequest <| upvoteRequest question]
@@ -203,16 +220,6 @@ update msg model =
 
     ReceiveResponse _ ->
       model ! []
-    {--
-    ReceiveResponse (Ok response) ->
-      model ! []
-
-    ReceiveResponse (Err err) ->
-      model
-        |> setResult (toString err)
-        |> markResultAsError
-        |> endLoading
-    --}
 
 -- VIEW
 
@@ -261,28 +268,46 @@ createButton =
   div [] 
     [ div [ class "fixed-action-btn" ]
       [ a [ href "#modal1", class "modal-trigger btn-floating btn-large waves-effect waves-light cyan lighten-3"]
-        [ icon "add" ]
-        ]
-    , div [ id "modal1", class "modal modal-fixed-footer" ]
-      [ div [ class "modal-content" ]
-        [ div [ class "row" ]
-          [ div [class "input-field col s6" ]
-            [ input [ id "firstname", type_ "text", attribute "data-length" "25" ] []
-            , label [for "firstname"] [ text "Title" ]
-            ]
-          ]
-        , div [ class "row"]
-          [ div [class "input-field col s12"]
-            [ textarea [ id "textarea1", class "materialize-textarea", attribute "data-length" "300"] []
-            , label [for "textarea1"] [text "Enter description (optional)"]
-            ]
-          ]
-        ]
-      , div [ class "modal-footer" ] 
-        [ button [class "btn waves-effect waves-light", type_ "submit", name "action"][text "Submit"]
+        [ icon "add"
         ]
       ]
     ]
+
+createForm : SimpleLocation -> Html Msg
+createForm location =
+  div [ class "row" ]
+    [ Html.form [ class "col s12", method "POST", action "/create" ]
+      [ div [ class "row" ]
+        [ h3 [] [ text "Create a Voting Question" ]
+        ]
+      , input [ type_ "hidden", name "csrfmiddlewaretoken", value "{{ csrf_token }}" ] []
+      , input [ type_ "hidden", name "lat", value <| toString location.lat ] []
+      , input [ type_ "hidden", name "lon", value <| toString location.lon ] []
+      , div [ class "row" ]
+        [ div [class "input-field col s12" ]
+          [ input [ name "title", id "title", type_ "text", attribute "data-length" "25", onInput TitleUpdated ] []
+          , label [for "title"] [ text "Title" ]
+          ]
+        ]
+      , div [ class "row" ]
+        [ div [class "input-field col s12" ]
+          [ textarea [ name "prompt", id "prompt", class "materialize-textarea", onInput PromptUpdated ] []
+          , label [for "prompt"] [ text "Prompt" ]
+          ]
+        ]
+      , div [ class "row" ]
+        [ button [ class "modal-action modal-close cyan white-text waves-effect waves-light btn-flat" ] [ text "Create" ]
+        ]
+      ]
+    ]
+
+createModal : SimpleLocation -> Html Msg
+createModal location =
+    div [ id "modal1", class "modal" ]
+      [ div [ class "modal-content" ]
+        [ createForm location
+        ]
+      ]
 
 navbar : Html Msg
 navbar =
@@ -298,9 +323,15 @@ questions : List Question
 questions =
   [
   {% for question in voting_questions %}
-    Voting <| VotingQuestion "{{ question.title }}" "{{ question.prompt }}" {{ question.score }} "{{ question.id }}" {{ question.user_vote }} (SimpleLocation {{ question.lat }} {{ question.lon }}) {{ question.radius }},
+    Voting <| VotingQuestion "{{ question.title | safe }}" "{{ question.prompt | safe }}" {{ question.score }} "{{ question.id }}" {{ question.user_vote }} (SimpleLocation {{ question.lat }} {{ question.lon }}) {{ question.radius }}
+    {% if not forloop.last %}
+      ,
+    {% endif %}
   {% endfor %}
   {% for question in mc_questions %}
+    {% if forloop.first %}
+    ,
+    {% endif %}
     MC <| MultipleChoiceQuestion "{{ question.id }}" "{{ question.title }}" "{{ question.prompt }}" 
       [
       {% for option in question.possibleAnswers %}
@@ -345,17 +376,27 @@ questionView question =
     MC mcQ ->
       mcQuestion mcQ
 
+mainContent : Model -> Html Msg
+mainContent model =
+  case model.userLocation of
+    Ok (Just location) ->
+      div []
+        ( model.questions
+          |> List.filter (filterByRadius model.userLocation)
+          |> List.sortWith (compareDistancesTo model.userLocation)
+          |> List.map questionView
+        )
+
+    _ ->
+      h1 [ class "center thin" ] [ text "Loading your location..." ]
+
 view : Model -> Html Msg
 view model =
   div [ class "cyan lighten-5" ]
     [ navbar
     , createButton
-    , div []
-      ( model.questions
-        |> List.filter (filterByRadius model.userLocation)
-        |> List.sortWith (compareDistancesTo model.userLocation)
-        |> List.map questionView
-      )
+    , createModal <| getUserLocation model
+    , mainContent model
     ]
 
 -- SUBSCRIPTIONS
