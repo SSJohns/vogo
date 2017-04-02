@@ -49,10 +49,12 @@ def render_elm(request, html_template, html_context, elm_template, elm_context):
 class HomeView(View):
   def get(self, request):
     voting_questions = BoolQuestion.objects.all()
+    mc_questions = MCQuestion.objects.all()
     elm_flags = {
       'score': 42,
       'name': "8 bit 1 byte",
-      'voting_questions': voting_questions
+      'voting_questions': voting_questions,
+      'mc_questions': mc_questions
     }
     context = {
       'static_file': 'js/home.js'

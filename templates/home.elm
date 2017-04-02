@@ -212,11 +212,23 @@ questions : List Question
 questions =
   [
   {% for question in voting_questions %}
-    Voting <| VotingQuestion "{{ question.title }}" "{{ question.prompt }}" {{ question.score }} "{{ question.id }}" Neutral
-    {% if not forloop.last	%}
+    Voting <| VotingQuestion "{{ question.title }}" "{{ question.prompt }}" {{ question.score }} "{{ question.id }}" Neutral,
+  {% endfor %}
+  {% for question in mc_questions %}
+    MC <| MultipleChoiceQuestion "{{ question.id }}" "{{ question.title }}" "{{ question.prompt }}" 
+      [
+      {% for option in question.possibleAnswers %}
+        MultipleChoiceOption "{{ option.option }}" "{{ option.id }}" False
+        {% if not forloop.last %}
+        ,
+        {% endif %}
+      {% endfor %}
+      ]
+    {% if not forloop.last %}
     ,
     {% endif %}
   {% endfor %}
+  --for option in mc_options?
   ]
 
 mcOption : MultipleChoiceOption -> Html Msg

@@ -38,7 +38,9 @@ class BoolResponse(AbstractResponse):
     question_id = models.ForeignKey(BoolQuestion, on_delete=models.CASCADE)
 
 class MCQuestion(AbstractQuestion):
-    pass
+    @property
+    def possibleAnswers(self):
+        return MCOption.objects.filter(question_id=self)
 
 class MCOption(models.Model):
     id = models.CharField(primary_key=True, default=generateUUID, editable=False, max_length=40)
