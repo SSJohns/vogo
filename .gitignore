@@ -5,3 +5,7 @@ static/
 elm-stuff/
 *.pyc
 elm-build/
+bin/
+include/
+lib/
+.Python
