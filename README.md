@@ -24,4 +24,5 @@ Elm 0.18
 ### Todo
 
 [ ] Make it possible for users to set an expiration date
+
 [ ] Give users a way to change the defualt distance of the vote submitted 
