@@ -4,12 +4,11 @@ Voting on the go. A django-elm application that allows users to create a vote sy
 
 ### Running
 Project is run with django, use is similar to basic startup for any django project.
-> python manage.py makemigrations main
-
-> python manage.py migrate
-
-> python manage.py runserver
-
+```
+python manage.py makemigrations main
+python manage.py migrate
+python manage.py runserver
+```
 Project is then live at `localhost:8000` and votes can be add with a location
 
 ### Technologies
@@ -19,10 +18,10 @@ Elm 0.18
 
 ### Installation
 
-> elm-package install
+- pip install django
+- elm-package install
 
 ### Todo
 
-[ ] Make it possible for users to set an expiration date
-
-[ ] Give users a way to change the defualt distance of the vote submitted 
+- [ ] Make it possible for users to set an expiration date
+- [ ] Give users a way to change the defualt distance of the vote submitted 
