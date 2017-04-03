@@ -1,6 +1,8 @@
 # VoGo
 
-Voting on the go. A django-elm application that allows users to create a vote system within a certain range of where the question was made. Based off of the Django-Elm interface built [here](https://github.com/dmattia/django-elm). The system allows for users to
+Voting on the go. A django-elm application that allows users to create a vote system within a certain range of where the question was made. 
+
+Based off of the Django-Elm interface built [here](https://github.com/dmattia/django-elm). The system allows for users to create an elm frontend for a project and serve and compile that frontend using Django's fileserver and templating. 
 
 ### Running
 Project is run with django, use is similar to basic startup for any django project.
